@@ -3,6 +3,10 @@ import numpy as np
 import triangle
 from scipy.sparse import  coo_matrix,diags,csr_matrix
 import scipy.sparse.linalg as spla
+
+#  creating a mesh
+
+
 image=cv2.imread('test3.png')
 image=cv2.resize((image),(800,600))
 image=cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
@@ -53,7 +57,7 @@ cv2.waitKey(20000)
 # contraction
 
 
-def build_L(V, F):
+def build_L(V, F):      # uniform Laplacian ( provided better results then the contangent laplacian one)
     N = len(V)
     i, j, k = F[:, 0], F[:, 1], F[:, 2]
 
@@ -68,7 +72,7 @@ def build_L(V, F):
     L_diag = csr_matrix((-row_sums, (np.arange(N), np.arange(N))), shape=(N, N))
     return L_off + L_diag
 
-# def build_L(V, F):
+# def build_L(V, F):                   // Contangent laplacian method based on geometry and understand the mesh better than the uniform one
 #     N = len(V)
 #     i, j, k = F[:, 0], F[:, 1], F[:, 2]
 #     vi, vj, vk = V[i], V[j], V[k]
@@ -103,11 +107,16 @@ def vertex_areas(V, F):
     np.add.at(A, j, area_safe/3)
     np.add.at(A, k, area_safe/3)
     return A
+
+#CALCULATE THE TOTAL AREA
       
 def face_areas(V, F):
     i, j, k = F[:,0], F[:,1], F[:,2]
     p0, p1, p2 = V[i], V[j], V[k]
     return 0.5*np.abs(p0[:,0]*(p1[:,1]-p2[:,1]) + p1[:,0]*(p2[:,1]-p0[:,1]) + p2[:,0]*(p0[:,1]-p1[:,1]))
+
+
+# IT CONTRACTS THE VERTICES BY USING LAPLACING MATRIX ALONG WITH THE WEIGHTS 
 
 def contract(Wl,Wh,V_next,L,V_cur,Gamma=0.5):
         V_cur=(0.8*V_cur)+(0.20*V_next)
@@ -134,6 +143,11 @@ def contract(Wl,Wh,V_next,L,V_cur,Gamma=0.5):
 #      Wl_curr = (Wl_scaled)
 #      Wh = np.minimum(Wh_target, Wh * 1.3)
 #      return Wl_curr, Wh_curr
+
+
+
+# UPDATE WEIGHTS IS VERY IMPORTANT FOR THIS ALFORITHM , THE CRUX IS TO FIND A BALANCE BETWEEN BOTH THE FORCES AND SHRINK THE MESH INTO THE SMOOTH 1D SKELETON
+
 def update_weights(Wl, Wh, Wh0, Omega_0, Omega_t, s_L,Wl_cap=100, Wh_cap=50.0, max_growth=1.3):
     Wl_next = Wl * s_L
     # Wl_next=np.minimum(Wl_next,Wl_cap)
@@ -147,7 +161,11 @@ def update_weights(Wl, Wh, Wh0, Omega_0, Omega_t, s_L,Wl_cap=100, Wh_cap=50.0, m
     return Wl_next, Wh_next
 
 
-def smooth_omega(Omega, F, iterations=2):
+
+
+ # YOU CAN RUN THE CODE WITHOUT USING THIS TOO , IT IS JUST USED TO A SMOOTH RESULT , BUT CURRENTLY THIS FUCNTION DOESNT MAKE MUCH DIFFERNCE SO IF YOU WANT YOU CAN REMOVE IT
+
+def smooth_omega(Omega, F, iterations=2):          
     N = len(Omega)
     edges = np.vstack([F[:,[0,1]], F[:,[1,2]], F[:,[2,0]]])
     for _ in range(iterations):
@@ -159,7 +177,11 @@ def smooth_omega(Omega, F, iterations=2):
 
 
 
-def find_collapsed_edges(V, F, V_original, shrink_threshold=0.05):
+
+  # NOT A PART OF THE CONTRACTION MESH ALGORITHM I JUST ADDED TO FIND THE EDGES WHERE I WAS HAVIGN PROBLME YOU MAY NOT NEED TO USE THIS AND CAN REMOVE IT DEPENDING UPON YOU
+
+
+def find_collapsed_edges(V, F, V_original, shrink_threshold=0.05):   
     """
     Detect edges that have shrunk to less than `shrink_threshold` of their
     ORIGINAL length — this measures actual collapse, not just small size.
@@ -181,7 +203,12 @@ def find_collapsed_edges(V, F, V_original, shrink_threshold=0.05):
     print(f"shrink ratio range: min={shrink_ratio.min():.4f} max={shrink_ratio.max():.4f} mean={shrink_ratio.mean():.4f}")
 
     return collapsed_edges, shrink_ratio, edges
-def find_exploding_edges(V, F, V_original, grow_threshold=3.0):
+
+
+ # NOT A PART OF THE CONTRACTION MESH ALGORITHM, I  ADDED THIS FUNTION TO FIND THE EDGES WHERE I WAS HAVIGN PROBLEM .YOU MAY NOT NEED TO USE THIS AND CAN REMOVE IT DEPENDING UPON YOU
+
+
+def find_exploding_edges(V, F, V_original, grow_threshold=3.0):      
     edges = np.vstack([F[:, [0,1]], F[:, [1,2]], F[:, [2,0]]])
     edges = np.unique(np.sort(edges, axis=1), axis=0)
 
@@ -199,6 +226,10 @@ def find_exploding_edges(V, F, V_original, grow_threshold=3.0):
         print(V[exploding_verts][:10])   # first 10, to avoid flooding output
 
     return exploding_edges, exploding_verts
+
+
+
+# MAIN CODE STARTS FROM HERE 
 
 
 V=np.array(result["vertices"],dtype=float)
@@ -258,4 +289,4 @@ for step in range(20):
      cv2.waitKey(20000)
      i=i+1
 
-# V_next=contract(Wl,Wh,L)
+
