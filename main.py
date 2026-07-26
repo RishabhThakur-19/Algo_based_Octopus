@@ -1,0 +1,16 @@
+import cv2
+import numpy as np
+image1 =cv2.imread('test1.png')
+image = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
+image=cv2.resize((image), (800, 600))
+image = cv2.distanceTransform(image, distanceType=cv2.DIST_L2, maskSize=5)
+image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
+image= image.astype(np.uint8)
+edges = cv2.Canny(image1, threshold1=50, threshold2=150)
+edges = cv2.resize((edges), (800, 600))
+merge=cv2.add(image,edges)
+merge=cv2.resize((merge),(800,600))
+cv2.imshow('edges', edges)
+cv2.imshow('image',image)
+cv2.imshow('merge', merge)
+cv2.waitKey(0)
